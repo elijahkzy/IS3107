@@ -7,9 +7,9 @@ import json
 
 from airflow.operators.python_operator import PythonOperator
 from airflow.operators.trigger_dagrun import TriggerDagRunOperator
-import os
 import csv
 import logging
+import io
 
 from airflow import DAG
 import tweepy
@@ -63,8 +63,6 @@ def tweetdata_extract(ti):
         author_id = []
         texts = []
         created_dates = []
-        #usernames = []
-        #names = []
         tweets = client.search_recent_tweets(query=ticker, max_results=50, 
             tweet_fields = ['author_id','created_at','text','source','lang','geo'],
             user_fields = ['name','username','location','verified'],
@@ -81,39 +79,14 @@ def tweetdata_extract(ti):
             texts.append('')
             created_dates.append('')
             author_id.append('')
-        # for id in author_id:
-        #     user_data=client.get_user(id=id)
-        #     username = user_data['data']['username']
-        #     name = user_data['data']['name']
-        #     usernames.append(username)
-        #     names.append(name)
-
-
-        # try: 
-        #     for tweet in tweets['includes']['users']:
-        #         try: 
-        #             locations.append(tweet['location'])
-        #         except:
-        #             locations.append('')
-
-        #         try: 
-        #             usernames.append(tweet['username'])
-        #         except:
-        #             usernames.append('')
-        # except:
-        #     locations.append('')
-        #     usernames.append('')
-        # ticker_dict[ticker]['locations'] = locations
-        # ticker_dict[ticker]['texts'] = texts
-        # ticker_dict[ticker]['created_dates'] = created_dates
-        # ticker_dict[ticker]['usernames'] = usernames
-        #print(len(locations), len(tickers), len(usernames), len(texts), len(created_dates))
+        
     df = pd.DataFrame({'tickers': tickers,
                         #'username': usernames, 
                         'texts':texts, 
                         #'name': names, 
                         'dates': created_dates})
-    twitter_data = df.to_json(orient='records')  
+    twitter_data = df.to_json(orient='records')
+    print(twitter_data)  
     ti.xcom_push(key='twitter_data', value=twitter_data)
 
 def tweetdata_upload(ti):
@@ -124,16 +97,13 @@ def tweetdata_upload(ti):
     jsondata=json.load(openfile)
     openfile.close()
     project_id = jsondata['project_id']
-    df = pd.DataFrame(eval(twitter_data))
-    df['texts'] = list(map(lambda x: x.encode('utf-8','replace'), df['texts']))
-    #df.to_csv("twitter_data.csv", index=False)
-    #df = df.to_json(orient='records')
-    df['tickers'] = list(map(lambda x: x.encode('utf-8','strict'), df['tickers']))
-    #df['texts'] = list(map(lambda x: x.encode('utf-8','replace'), df['texts']))
-    df['dates'] = list(map(lambda x: x.encode('utf-8','strict'), df['dates']))
+    df = pd.read_json(io.StringIO(twitter_data), encoding='utf-8')
 
-    #df.columns = df.columns.str.replace(' ', '_')
+    df['texts'] = df['texts'].apply(lambda x: x.encode('utf-8', errors='replace').decode('utf-8'))
+    df['tickers'] = df['tickers'].apply(lambda x: x.encode('utf-8', errors='replace').decode('utf-8'))
+    df['dates'] = df['dates'].apply(lambda x: x.encode('utf-8', errors='replace').decode('utf-8'))
 
+    print(df)
 
     # Construct a BigQuery client object.
     credentials_path = '/mnt/c/Users/darkk/OneDrive/NUS/Y3S2/IS3107/proj/test-proj-378801-e260b3ef768e.json'
@@ -142,13 +112,17 @@ def tweetdata_upload(ti):
     
     project_id = jsondata['project_id']
     staging_table_id = project_id + ".twitter_data.stock_info"
-    job = client.load_table_from_dataframe(df, staging_table_id)
+    job_config = bigquery.LoadJobConfig(
+        encoding='UTF-8',
+        write_disposition=bigquery.WriteDisposition.WRITE_TRUNCATE
+    )
+    job = client.load_table_from_dataframe(df, staging_table_id, job_config=job_config)
     job.result()
+
 
 default_args = {
      'owner': 'airflow',
      'depends_on_past': False,
-     'email': ['fxing@example.com'],
      'email_on_failure': False,
      'email_on_retry': False,
      'retries': 1
@@ -159,8 +133,7 @@ with DAG('tweets_data_dag',
             description='Collect Twitter Info For Analysis',
             catchup=False, 
             start_date= datetime(2020, 12, 23), 
-            schedule_interval= None # to change to 0 0 * * * (daily)
-  
+            schedule_interval=timedelta(days=1)
           ) as dag:
     
     get_twitter_data = PythonOperator(
