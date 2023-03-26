@@ -95,7 +95,7 @@ def tweetdata_upload(ti):
     '''push the twitter data into bigquery 
     '''
     twitter_data = ti.xcom_pull(key='twitter_data', task_ids=['get_twitter_data'])[0]
-    openfile=open('/mnt/c/Users/hsinz/Desktop/nus/Y3S2/IS3107/Proj/privateKey.json')
+    openfile=open('/mnt/c/Users/darkk/OneDrive/NUS/Y3S2/IS3107/proj/test-proj-378801-e260b3ef768e.json')
     jsondata=json.load(openfile)
     openfile.close()
     project_id = jsondata['project_id']
@@ -108,7 +108,7 @@ def tweetdata_upload(ti):
     print(df)
 
     # Construct a BigQuery client object.
-    credentials_path = '/mnt/c/Users/hsinz/Desktop/nus/Y3S2/IS3107/Proj/privateKey.json'
+    credentials_path = '/mnt/c/Users/darkk/OneDrive/NUS/Y3S2/IS3107/proj/test-proj-378801-e260b3ef768e.json'
     os.environ["GOOGLE_APPLICATION_CREDENTIALS"]= credentials_path
     client = bigquery.Client()
     
