@@ -55,14 +55,15 @@ def tweetdata_extract(ti):
         bearer_token='AAAAAAAAAAAAAAAAAAAAAGzylgEAAAAA5UESpwQdxCu2wO5e8x8A0looTk0%3DCIIzaw5kytSTDaW6zWNvs7b1MsshuYE9gyA06vy0dkNwqk07gB',
         return_type=dict)
 
+    tickerName = []
+    author_id = []
+    texts = []
+    created_dates = []
    
     for ticker in tickers:
         ticker = f'"{ticker}"'
         print(ticker)
-        tickers = []
-        author_id = []
-        texts = []
-        created_dates = []
+
         tweets = client.search_recent_tweets(query=ticker, max_results=50, 
             tweet_fields = ['author_id','created_at','text','source','lang','geo'],
             user_fields = ['name','username','location','verified'],
@@ -70,17 +71,18 @@ def tweetdata_extract(ti):
             place_fields = ['country','country_code'])
         try:
             for tweet in tweets['data']:
-                tickers.append(ticker)
-                texts.append(tweet['text'])
-                created_dates.append(tweet['created_at'])
-                author_id.append(tweet['author_id'])
+                if tweet['lang'] == 'en':
+                    tickerName.append(ticker)
+                    texts.append(tweet['text'])
+                    created_dates.append(tweet['created_at'])
+                    author_id.append(tweet['author_id'])
         except:
-            tickers.append('')
+            tickerName.append('')
             texts.append('')
             created_dates.append('')
             author_id.append('')
         
-    df = pd.DataFrame({'tickers': tickers,
+    df = pd.DataFrame({'tickers': tickerName,
                         #'username': usernames, 
                         'texts':texts, 
                         #'name': names, 
@@ -93,7 +95,7 @@ def tweetdata_upload(ti):
     '''push the twitter data into bigquery 
     '''
     twitter_data = ti.xcom_pull(key='twitter_data', task_ids=['get_twitter_data'])[0]
-    openfile=open('/mnt/c/Users/darkk/OneDrive/NUS/Y3S2/IS3107/proj/test-proj-378801-e260b3ef768e.json')
+    openfile=open('/mnt/c/Users/hsinz/Desktop/nus/Y3S2/IS3107/Proj/privateKey.json')
     jsondata=json.load(openfile)
     openfile.close()
     project_id = jsondata['project_id']
@@ -106,7 +108,7 @@ def tweetdata_upload(ti):
     print(df)
 
     # Construct a BigQuery client object.
-    credentials_path = '/mnt/c/Users/darkk/OneDrive/NUS/Y3S2/IS3107/proj/test-proj-378801-e260b3ef768e.json'
+    credentials_path = '/mnt/c/Users/hsinz/Desktop/nus/Y3S2/IS3107/Proj/privateKey.json'
     os.environ["GOOGLE_APPLICATION_CREDENTIALS"]= credentials_path
     client = bigquery.Client()
     
