@@ -1,31 +1,25 @@
 import datetime
-from google.cloud import bigquery 
-import pandas as pd
 import yfinance as yf
+import pandas as pd
+import pandas_gbq
+from google.cloud import bigquery
 import os
 import json
-
-from airflow.operators.python_operator import PythonOperator
-from airflow.operators.trigger_dagrun import TriggerDagRunOperator
-import csv
-import logging
-import io
-
-from airflow import DAG
 import tweepy
-from datetime import datetime, timedelta  
+from datetime import datetime, timedelta 
+import io 
 
 from tweepy import OAuthHandler
 from timeit import default_timer as timer
 
-import pandas as pd
-
 def tweetdata_extract(ti):
-    tickers=[
-    'singapore airlines',
-    'dbs',
+    tickers_list=[
+    'ocbc',
+    'jardine matheson',
     'comfortdelgro',
     'genting',
+    'hongkong land holdings',
+    'dbs',
     'capitaland',
     'uob',
     'mapletree logistics',
@@ -41,7 +35,12 @@ def tweetdata_extract(ti):
     'ascendas',
     'frasers',
     'hongkong land holdings',
-    'st engineering'
+    'st engineering',
+    'cycle and carriage',
+    'emperador',
+    'keppel'
+    'uol group',
+    'yangzijiang financial'
     ]
     
     consumer_key = 'omhSwvUaRXdSh4fkq1Q4VhU36'
@@ -55,15 +54,13 @@ def tweetdata_extract(ti):
         bearer_token='AAAAAAAAAAAAAAAAAAAAAGzylgEAAAAA5UESpwQdxCu2wO5e8x8A0looTk0%3DCIIzaw5kytSTDaW6zWNvs7b1MsshuYE9gyA06vy0dkNwqk07gB',
         return_type=dict)
 
-    tickerName = []
+    tickers = []
     author_id = []
     texts = []
     created_dates = []
-   
-    for ticker in tickers:
+    for ticker in tickers_list:
         ticker = f'"{ticker}"'
         print(ticker)
-
         tweets = client.search_recent_tweets(query=ticker, max_results=50, 
             tweet_fields = ['author_id','created_at','text','source','lang','geo'],
             user_fields = ['name','username','location','verified'],
@@ -71,18 +68,17 @@ def tweetdata_extract(ti):
             place_fields = ['country','country_code'])
         try:
             for tweet in tweets['data']:
-                if tweet['lang'] == 'en':
-                    tickerName.append(ticker)
-                    texts.append(tweet['text'])
-                    created_dates.append(tweet['created_at'])
-                    author_id.append(tweet['author_id'])
+                tickers.append(ticker)
+                texts.append(tweet['text'])
+                created_dates.append(tweet['created_at'])
+                author_id.append(tweet['author_id'])
         except:
-            tickerName.append('')
+            tickers.append('')
             texts.append('')
             created_dates.append('')
             author_id.append('')
         
-    df = pd.DataFrame({'tickers': tickerName,
+    df = pd.DataFrame({'tickers': tickers,
                         #'username': usernames, 
                         'texts':texts, 
                         #'name': names, 
@@ -91,11 +87,12 @@ def tweetdata_extract(ti):
     print(twitter_data)  
     ti.xcom_push(key='twitter_data', value=twitter_data)
 
-def tweetdata_upload(ti):
+
+def tweetdata_transform(ti):
     '''push the twitter data into bigquery 
     '''
-    twitter_data = ti.xcom_pull(key='twitter_data', task_ids=['get_twitter_data'])[0]
-    openfile=open('/mnt/c/Users/darkk/OneDrive/NUS/Y3S2/IS3107/proj/test-proj-378801-e260b3ef768e.json')
+    twitter_data = ti.xcom_pull(key='twitter_data', task_ids=['tweetdata_extract'])[0]
+    openfile=open('/mnt/c/Users/darkk/OneDrive/NUS/Y3S2/IS3107/proj/is3107-test.json')
     jsondata=json.load(openfile)
     openfile.close()
     project_id = jsondata['project_id']
@@ -105,10 +102,8 @@ def tweetdata_upload(ti):
     df['tickers'] = df['tickers'].apply(lambda x: x.encode('utf-8', errors='replace').decode('utf-8'))
     df['dates'] = df['dates'].apply(lambda x: x.encode('utf-8', errors='replace').decode('utf-8'))
 
-    print(df)
-
     # Construct a BigQuery client object.
-    credentials_path = '/mnt/c/Users/darkk/OneDrive/NUS/Y3S2/IS3107/proj/test-proj-378801-e260b3ef768e.json'
+    credentials_path = '/mnt/c/Users/darkk/OneDrive/NUS/Y3S2/IS3107/proj/is3107-test.json'
     os.environ["GOOGLE_APPLICATION_CREDENTIALS"]= credentials_path
     client = bigquery.Client()
     
@@ -120,34 +115,3 @@ def tweetdata_upload(ti):
     )
     job = client.load_table_from_dataframe(df, staging_table_id, job_config=job_config)
     job.result()
-
-
-default_args = {
-     'owner': 'airflow',
-     'depends_on_past': False,
-     'email_on_failure': False,
-     'email_on_retry': False,
-     'retries': 1
-    }
-
-with DAG('tweets_data_dag',
-            default_args=default_args,
-            description='Collect Twitter Info For Analysis',
-            catchup=False, 
-            start_date= datetime(2020, 12, 23), 
-            schedule_interval=timedelta(days=1)
-          ) as dag:
-    
-    get_twitter_data = PythonOperator(
-        task_id='get_twitter_data',
-        provide_context=True,
-        python_callable=tweetdata_extract
-    )
-
-    push_twitter_data = PythonOperator(
-        task_id='push_twitter_data',
-        provide_context=True,
-        python_callable=tweetdata_upload
-    )
-
-get_twitter_data >> push_twitter_data
