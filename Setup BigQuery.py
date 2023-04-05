@@ -3,7 +3,7 @@ import os
 import json
 
 # Change to your key
-key = 'key.json'
+key = 'C:/Users/darkk/OneDrive/NUS/Y3S2/IS3107/proj/test-proj-378801-e260b3ef768e.json'
 
 #Get Project ID
 openfile = open(key)
