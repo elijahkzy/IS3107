@@ -20,6 +20,10 @@ from timeit import default_timer as timer
 
 import pandas as pd
 
+# Change to your key
+key = '/mnt/c/Users/darkk/OneDrive/NUS/Y3S2/IS3107/proj/test-proj-378801-e260b3ef768e.json'
+# key = '/mnt/c/Users/Estella Lee Jie Yi/OneDrive - National University of Singapore/Desktop/NUS/Y3S2/IS3107/project/key.json'
+
 def tweetdata_extract(ti):
     tickers=[
     'singapore airlines',
@@ -95,10 +99,9 @@ def tweetdata_upload(ti):
     '''push the twitter data into bigquery 
     '''
     twitter_data = ti.xcom_pull(key='twitter_data', task_ids=['get_twitter_data'])[0]
-    openfile=open('/mnt/c/Users/darkk/OneDrive/NUS/Y3S2/IS3107/proj/test-proj-378801-e260b3ef768e.json')
+    openfile=open(key)
     jsondata=json.load(openfile)
     openfile.close()
-    project_id = jsondata['project_id']
     df = pd.read_json(io.StringIO(twitter_data), encoding='utf-8')
 
     df['texts'] = df['texts'].apply(lambda x: x.encode('utf-8', errors='replace').decode('utf-8'))
@@ -108,12 +111,12 @@ def tweetdata_upload(ti):
     print(df)
 
     # Construct a BigQuery client object.
-    credentials_path = '/mnt/c/Users/darkk/OneDrive/NUS/Y3S2/IS3107/proj/test-proj-378801-e260b3ef768e.json'
+    credentials_path = key
     os.environ["GOOGLE_APPLICATION_CREDENTIALS"]= credentials_path
     client = bigquery.Client()
     
     project_id = jsondata['project_id']
-    staging_table_id = project_id + ".twitter_data.stock_info"
+    staging_table_id = project_id + ".twitter_data_raw.stock_info"
     job_config = bigquery.LoadJobConfig(
         encoding='UTF-8',
         write_disposition=bigquery.WriteDisposition.WRITE_TRUNCATE
@@ -130,13 +133,14 @@ default_args = {
      'retries': 1
     }
 
-with DAG('tweets_data_dag',
-            default_args=default_args,
-            description='Collect Twitter Info For Analysis',
-            catchup=False, 
-            start_date= datetime(2020, 12, 23), 
-            schedule_interval=timedelta(days=1)
-          ) as dag:
+with DAG(
+    'tweets_data_dag',
+    default_args=default_args,
+    description='Collect Twitter Info For Analysis',
+    catchup=False, 
+    start_date= datetime(2020, 12, 23), 
+    schedule_interval=timedelta(days=1)
+) as dag:
     
     get_twitter_data = PythonOperator(
         task_id='get_twitter_data',

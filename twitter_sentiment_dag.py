@@ -12,33 +12,33 @@ import logging
 import io
 
 from airflow import DAG
-import tweepy
 from datetime import datetime, timedelta  
-
-from tweepy import OAuthHandler
 from timeit import default_timer as timer
 
 import pandas as pd
 import re
 import nltk
-from textblob import TextBlob
 from nltk.corpus import stopwords
 from nltk.sentiment import SentimentIntensityAnalyzer
-# nltk.download('vader_lexicon')
-# nltk.download('stopwords')
+nltk.download('vader_lexicon')
+nltk.download('stopwords')
+
+# Change to your key
+key = '/mnt/c/Users/darkk/OneDrive/NUS/Y3S2/IS3107/proj/test-proj-378801-e260b3ef768e.json'
+# key = '/mnt/c/Users/Estella Lee Jie Yi/OneDrive - National University of Singapore/Desktop/NUS/Y3S2/IS3107/project/key.json'
 
 def get_twitter_data(ti):
     # pull data from staging area of twitter table in bigquery
 
-    credentials_path = '/mnt/c/Users/darkk/OneDrive/NUS/Y3S2/IS3107/proj/test-proj-378801-e260b3ef768e.json'
-    os.environ["GOOGLE_APPLICATION_CREDENTIALS"]= credentials_path
+    credentials_path = key
+    os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = credentials_path
     client = bigquery.Client()
 
-    openfile=open('/mnt/c/Users/darkk/OneDrive/NUS/Y3S2/IS3107/proj/test-proj-378801-e260b3ef768e.json')
-    jsondata=json.load(openfile)
+    openfile = open(key)
+    jsondata = json.load(openfile)
 
     project_id = jsondata['project_id']
-    staging_table_id = project_id + ".twitter_data.stock_info"
+    staging_table_id = project_id + ".twitter_data_raw.stock_info"
 
     table = client.get_table(staging_table_id)
     df = client.list_rows(table).to_dataframe()
@@ -99,14 +99,13 @@ def tweetdata_upload(ti):
     json_str = ''.join(twitter_data_processed)
     df = pd.read_json(json_str, encoding='utf-8', orient = 'records')
 
-    openfile=open('/mnt/c/Users/darkk/OneDrive/NUS/Y3S2/IS3107/proj/test-proj-378801-e260b3ef768e.json')
+    openfile=open(key)
     jsondata=json.load(openfile)
     openfile.close()
-    project_id = jsondata['project_id']
 
     # Construct a BigQuery client object.
-    credentials_path = '/mnt/c/Users/darkk/OneDrive/NUS/Y3S2/IS3107/proj/test-proj-378801-e260b3ef768e.json'
-    os.environ["GOOGLE_APPLICATION_CREDENTIALS"]= credentials_path
+    credentials_path = key
+    os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = credentials_path
     client = bigquery.Client()
 
     project_id = jsondata['project_id']
@@ -128,13 +127,14 @@ default_args = {
      'retries': 1
     }
 
-with DAG('nlp_tweets_dag',
-            default_args=default_args,
-            description='Apply NLP on tweets For Analysis',
-            catchup=False, 
-            start_date= datetime(2020, 12, 23), 
-            schedule_interval=timedelta(days=1)
-          ) as dag:
+with DAG(
+    'nlp_tweets_dag',
+    default_args=default_args,
+    description='Apply NLP on tweets For Analysis',
+    catchup=False, 
+    start_date= datetime(2020, 12, 23), 
+    schedule_interval=timedelta(days=1)
+) as dag:
     
     get_twitter_data = PythonOperator(
         task_id='get_twitter_data',
@@ -149,15 +149,15 @@ with DAG('nlp_tweets_dag',
     )
 
     process_twitter_data = PythonOperator(
-    task_id='process_twitter_data',
-    provide_context=True,
-    python_callable=process_twitter_data
+        task_id='process_twitter_data',
+        provide_context=True,
+        python_callable=process_twitter_data
     )
 
     push_twitter_data = PythonOperator(
-    task_id='push_twitter_data',
-    provide_context=True,
-    python_callable=tweetdata_upload
+        task_id='push_twitter_data',
+        provide_context=True,
+        python_callable=tweetdata_upload
     )
 
 get_twitter_data >> clean_twitter_data >> process_twitter_data >> push_twitter_data
