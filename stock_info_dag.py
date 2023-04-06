@@ -85,6 +85,7 @@ def financials_transform():
     project_id = jsondata['project_id']
     staging_table_id = project_id + ".yfinance_data_raw.stock_info"
     actual_table_id = project_id + ".yfinance_data.stock_info"
+    ticker_mapping_id = project_id + ".yfinance_data.ticker_mapping"
     
     #Connect To Bigquery
     credentials_path = key
@@ -112,6 +113,17 @@ def financials_transform():
     query_job = client.query(query)
     print('Successfully loaded stock prices')
 
+    query2 = f"""
+        ALTER TABLE `{actual_table_id}`
+        ADD COLUMN IF NOT EXISTS Ticker_Name STRING;
+        UPDATE `{actual_table_id}` x
+        SET Ticker_Name = t.`Ticker Name`
+        FROM `{ticker_mapping_id}` t
+        WHERE x.Ticker = t.Ticker;
+    """
+    query2_job = client.query(query2)
+    print('Successfully added ticker names')
+    
 default_args = {
      'owner': 'airflow',
      'depends_on_past': False,
@@ -127,7 +139,7 @@ with DAG(
     description='Collect Stock Info For Analysis',
     catchup=False, 
     start_date=datetime(2020, 12, 23), 
-    schedule_interval='@daily' #None # to change to 0 0 * * * (daily)
+    schedule_interval=timedelta(days=1)
 ) as dag:
     
     financialsExtract = PythonOperator(
