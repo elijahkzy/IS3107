@@ -4,6 +4,8 @@ import pandas as pd
 import yfinance as yf
 import os
 import json
+import snscrape.modules.twitter as sntwitter
+from datetime import datetime, timedelta  
 
 from airflow.operators.python_operator import PythonOperator
 from airflow.operators.trigger_dagrun import TriggerDagRunOperator
@@ -13,7 +15,7 @@ import io
 
 from airflow import DAG
 import tweepy
-from datetime import datetime, timedelta  
+from datetime import datetime, timedelta, date
 
 from tweepy import OAuthHandler
 from timeit import default_timer as timer
@@ -21,77 +23,66 @@ from timeit import default_timer as timer
 import pandas as pd
 
 # Change to your key
-key = '/mnt/c/Users/hsinz/Desktop/nus/Y3S2/IS3107/Proj/privateKey.json'
+# key = '/mnt/c/Users/hsinz/Desktop/nus/Y3S2/IS3107/Proj/privateKey.json'
+key = '/mnt/c/Users/hsinz/Desktop/nus/Y3S2/IS3107/Proj/sharedkey.json'
 
 def tweetdata_extract(ti):
     tickers=[
-    ('d05.SI', 'dbs'),
-    ('SE', 'garena'),
-    ('SE', 'shopee'),
-    ('039.SI', 'ocbc'),
-    ('U11.SI', 'uob'),
-    ('Z74.SI', 'singtel'),
-    ('F34.SI', 'wilmar'),
-    ('C6L.SI', 'singapore airlines'),
-    ('GRAB', 'grab'),
-    ('G13.SI', 'genting'),
-    ('C38U.SI', 'capitaland'),
-    ('G07.SI', 'great eastern'),
-    ('C07.SI', 'jardine'),
-    ('A17U.SI', 'ascendas'),
-    ('S63.SI', 'st engineering'),
-    ('BN4.SI', 'keppel')
+        ('d05.SI', 'dbs'),
+        ('SE', 'garena'),
+        ('SE', 'shopee'),
+        ('039.SI', 'ocbc'),
+        ('U11.SI', 'uob'),
+        ('Z74.SI', 'singtel'),
+        ('F34.SI', 'wilmar'),
+        ('C6L.SI', 'singapore airlines'),
+        ('GRAB', 'grab'),
+        ('G13.SI', 'genting'),
+        ('C38U.SI', 'capitaland'),
+        ('G07.SI', 'great eastern'),
+        ('C07.SI', 'jardine'),
+        ('A17U.SI', 'ascendas'),
+        ('S63.SI', 'st engineering'),
+        ('BN4.SI', 'keppel')
     ]
+
+    # Create an empty list to store the tweets
+    tweets = []
+    for tup in tickers:
+        keyword = f'{tup[1]}' #can use OR to specify other things #hashtag also can
+        # start_date = date(2023, 4, 1)
+        # end_date = date(2023, 4, 7)
+        end_date = date.today()
+        start_date = end_date - timedelta(days = 7)
+        user = ''
+
+        # Create a list of dates between start_date and end_date
+        delta = timedelta(days=1)
+        date_range = pd.date_range(start_date, end_date, freq='D').tolist()
+
+
+        #limit of tweets per day
+        limit = 10
+
+        # Loop over each day in the date range and retrieve X tweets per day
+        #if count == limit or when the loop ends
+        for i in range(len(date_range)):
+            day = date_range[i].strftime('%Y-%m-%d')
+            dayNext = (date_range[i] + timedelta(days = 1)).strftime('%Y-%m-%d')
+            query = f'{keyword} from:{user} since:{day} until:{dayNext} lang:en'
+            count = 0
+            for tweet in sntwitter.TwitterSearchScraper(query).get_items():
+                if (count == limit):
+                    break
+                tweets.append([keyword, tup[0], tweet.date, tweet.content, tweet.likeCount])
+                count+= 1
+            print(f'{keyword}_{day}: {count} total tweets retrieved')
+
+    # Convert the list of tweets to a Pandas DataFrame
+    df = pd.DataFrame(tweets, columns=['Ticker_Name', 'Ticker', 'Datetime', 'Texts', 'Likecount'])
     
-    consumer_key = 'omhSwvUaRXdSh4fkq1Q4VhU36'
-    consumer_secret = 'a4uNlAvLxQ1AE48sP9bdLTDKP8IKxONdLZXff7Ue6foSliY3s5'
-    access_token = '1278982307303419908-RewTtBb6Uj2ySXfAr6G5o8NjDb8IRm'
-    access_secret = '1oY9ZCHHXWykuyctbtGKPposnfpZKIJpLQxUSC3Xylhwa'
-
-    auth = OAuthHandler(consumer_key, consumer_secret)
-    auth.set_access_token(access_token, access_secret)
-    client = tweepy.Client(
-        bearer_token='AAAAAAAAAAAAAAAAAAAAAGzylgEAAAAA5UESpwQdxCu2wO5e8x8A0looTk0%3DCIIzaw5kytSTDaW6zWNvs7b1MsshuYE9gyA06vy0dkNwqk07gB',
-        return_type=dict)
-
-    tickerName = []
-    author_id = []
-    texts = []
-    created_dates = []
-    tickerCode = []
-   
-    for ticker in tickers:
-        keyword = f'"{ticker[1]}"'
-        print(keyword)
-
-        tweets = client.search_recent_tweets(query=keyword, max_results=50, 
-            tweet_fields = ['author_id','created_at','text','source','lang','geo'],
-            user_fields = ['name','username','location','verified'],
-            expansions = ['geo.place_id', 'author_id'],
-            place_fields = ['country','country_code'])
-        try:
-            for tweet in tweets['data']:
-                if tweet['lang'] == 'en':
-                    tickerName.append(keyword)
-                    texts.append(tweet['text'])
-                    created_dates.append(tweet['created_at'])
-                    author_id.append(tweet['author_id'])
-                    tickerCode.append(ticker[0])
-        except:
-            tickerName.append('')
-            texts.append('')
-            created_dates.append('')
-            author_id.append('')
-            tickerCode.append(ticker[0])
-        
-    df = pd.DataFrame({'tickers': tickerName,
-                       'ticker_code': tickerCode,
-                        #'username': usernames, 
-                        'texts':texts, 
-                        #'name': names, 
-                        'dates': created_dates})
     twitter_data = df.to_json(orient='records')
-    print(twitter_data)  
+    # print(twitter_data)  
     ti.xcom_push(key='twitter_data', value=twitter_data)
 
 def tweetdata_upload(ti):
@@ -103,10 +94,11 @@ def tweetdata_upload(ti):
     openfile.close()
     df = pd.read_json(io.StringIO(twitter_data), encoding='utf-8')
 
-    df['texts'] = df['texts'].apply(lambda x: x.encode('utf-8', errors='replace').decode('utf-8'))
-    df['tickers'] = df['tickers'].apply(lambda x: x.encode('utf-8', errors='replace').decode('utf-8'))
-    df['dates'] = df['dates'].apply(lambda x: x.encode('utf-8', errors='replace').decode('utf-8'))
-    df['ticker_code'] = df['ticker_code'].apply(lambda x: x.encode('utf-8', errors='replace').decode('utf-8'))
+    df['Texts'] = df['Texts'].apply(lambda x: x.encode('utf-8', errors='replace').decode('utf-8'))
+    df['Ticker_Name'] = df['Ticker_Name'].apply(lambda x: x.encode('utf-8', errors='replace').decode('utf-8'))
+    # df['Datetime'] = df['Datetime'].apply(lambda x: x.encode('utf-8', errors='replace').decode('utf-8'))
+    df['Ticker'] = df['Ticker'].apply(lambda x: x.encode('utf-8', errors='replace').decode('utf-8'))
+    df['Likecount'] = df['Likecount'].apply(lambda x: x.encode('utf-8', errors='replace').decode('utf-8'))
 
     print(df)
 
