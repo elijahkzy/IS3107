@@ -21,31 +21,26 @@ from timeit import default_timer as timer
 import pandas as pd
 
 # Change to your key
-key = '/mnt/c/Users/darkk/OneDrive/NUS/Y3S2/IS3107/proj/test-proj-378801-e260b3ef768e.json'
-# key = '/mnt/c/Users/Estella Lee Jie Yi/OneDrive - National University of Singapore/Desktop/NUS/Y3S2/IS3107/project/key.json'
+key = '/mnt/c/Users/hsinz/Desktop/nus/Y3S2/IS3107/Proj/privateKey.json'
 
 def tweetdata_extract(ti):
     tickers=[
-    'singapore airlines',
-    'dbs',
-    'comfortdelgro',
-    'genting',
-    'capitaland',
-    'uob',
-    'mapletree logistics',
-    'mapletree commercial',
-    'sats',
-    'wilmar',
-    'singtel',
-    'city developments',
-    'yangzijiang shipbuilding',
-    'thai beverage public company',
-    'venture corporation',
-    'sembcorp',
-    'ascendas',
-    'frasers',
-    'hongkong land holdings',
-    'st engineering'
+    ('d05.SI', 'dbs'),
+    ('SE', 'garena'),
+    ('SE', 'shopee'),
+    ('039.SI', 'ocbc'),
+    ('U11.SI', 'uob'),
+    ('Z74.SI', 'singtel'),
+    ('F34.SI', 'wilmar'),
+    ('C6L.SI', 'singapore airlines'),
+    ('GRAB', 'grab'),
+    ('G13.SI', 'genting'),
+    ('C38U.SI', 'capitaland'),
+    ('G07.SI', 'great eastern'),
+    ('C07.SI', 'jardine'),
+    ('A17U.SI', 'ascendas'),
+    ('S63.SI', 'st engineering'),
+    ('BN4.SI', 'keppel')
     ]
     
     consumer_key = 'omhSwvUaRXdSh4fkq1Q4VhU36'
@@ -63,12 +58,13 @@ def tweetdata_extract(ti):
     author_id = []
     texts = []
     created_dates = []
+    tickerCode = []
    
     for ticker in tickers:
-        ticker = f'"{ticker}"'
-        print(ticker)
+        keyword = f'"{ticker[1]}"'
+        print(keyword)
 
-        tweets = client.search_recent_tweets(query=ticker, max_results=50, 
+        tweets = client.search_recent_tweets(query=keyword, max_results=50, 
             tweet_fields = ['author_id','created_at','text','source','lang','geo'],
             user_fields = ['name','username','location','verified'],
             expansions = ['geo.place_id', 'author_id'],
@@ -76,17 +72,20 @@ def tweetdata_extract(ti):
         try:
             for tweet in tweets['data']:
                 if tweet['lang'] == 'en':
-                    tickerName.append(ticker)
+                    tickerName.append(keyword)
                     texts.append(tweet['text'])
                     created_dates.append(tweet['created_at'])
                     author_id.append(tweet['author_id'])
+                    tickerCode.append(ticker[0])
         except:
             tickerName.append('')
             texts.append('')
             created_dates.append('')
             author_id.append('')
+            tickerCode.append(ticker[0])
         
     df = pd.DataFrame({'tickers': tickerName,
+                       'ticker_code': tickerCode,
                         #'username': usernames, 
                         'texts':texts, 
                         #'name': names, 
@@ -107,6 +106,7 @@ def tweetdata_upload(ti):
     df['texts'] = df['texts'].apply(lambda x: x.encode('utf-8', errors='replace').decode('utf-8'))
     df['tickers'] = df['tickers'].apply(lambda x: x.encode('utf-8', errors='replace').decode('utf-8'))
     df['dates'] = df['dates'].apply(lambda x: x.encode('utf-8', errors='replace').decode('utf-8'))
+    df['ticker_code'] = df['ticker_code'].apply(lambda x: x.encode('utf-8', errors='replace').decode('utf-8'))
 
     print(df)
 
