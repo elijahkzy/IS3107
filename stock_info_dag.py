@@ -15,8 +15,7 @@ import logging
 from airflow import DAG
 
 # Change to your key
-key = '/mnt/c/Users/darkk/OneDrive/NUS/Y3S2/IS3107/proj/test-proj-378801-e260b3ef768e.json'
-# key = '/mnt/c/Users/Estella Lee Jie Yi/OneDrive - National University of Singapore/Desktop/NUS/Y3S2/IS3107/project/key.json'
+key = '/mnt/c/AA NUS/Y3S2/IS3107/Project Testing/key.json'
 
 def financials_extract(ti):
     '''
@@ -27,9 +26,7 @@ def financials_extract(ti):
     Output: None
     '''
     #STI Index
-    tickers = ['YF8.SI','BS6.SI', 'J36.SI', 'O39.SI', 'D05.SI', 'U11.SI', 'C09.SI', '9CI.SI', 'C07.SI', 'A17U.SI', 'Z74.SI', 'ME8U.SI', 'AJBU.SI',	
-               'C38U.SI', 'M44U.SI', 'U14.SI', 'V03.SI', 'D01.SI', 'H78.SI', 'BN4.SI', 'BUOU.SI', 'Y92.SI', 'C52.SI', 'S63.SI',	'G13.SI', 'EMI.SI',
-               'N2IU.SI', 'F34.SI', 'U96.SI', 'S58.SI']
+    tickers =  ['D05.SI', 'SE', 'O39.SI', 'U11.SI' ,'Z74.SI', 'F34.SI', 'C6L.SI', 'GRAB', 'G13.SI', 'C38U.SI','G07.SI', 'C07.SI', 'A17U.SI', 'S63.SI', 'BN4.SI']
     i = 0
     df = pd.DataFrame()
 
@@ -85,7 +82,6 @@ def financials_transform():
     project_id = jsondata['project_id']
     staging_table_id = project_id + ".yfinance_data_raw.stock_info"
     actual_table_id = project_id + ".yfinance_data.stock_info"
-    ticker_mapping_id = project_id + ".yfinance_data.ticker_mapping"
     
     #Connect To Bigquery
     credentials_path = key
@@ -93,7 +89,7 @@ def financials_transform():
     client = bigquery.Client()
 
     #Load Data from Staging table to Main table
-    query = f"""
+    query =  f"""
         INSERT INTO `{actual_table_id}`
         SELECT *
         FROM (SELECT *, AVG(CAST(Close AS float64)) OVER (PARTITION BY p.Ticker ORDER BY Date ROWS BETWEEN 4 PRECEDING AND CURRENT ROW) AS MA_5day,
@@ -111,19 +107,52 @@ def financials_transform():
         TRUNCATE TABLE `{staging_table_id}`;
     """
     query_job = client.query(query)
+    # query_job = client.query(query, job_config=bigquery.QueryJobConfig(write_disposition="WRITE_TRUNCATE"))
     print('Successfully loaded stock prices')
 
-    query2 = f"""
-        ALTER TABLE `{actual_table_id}`
-        ADD COLUMN IF NOT EXISTS Ticker_Name STRING;
-        UPDATE `{actual_table_id}` x
-        SET Ticker_Name = t.`Ticker Name`
-        FROM `{ticker_mapping_id}` t
-        WHERE x.Ticker = t.Ticker;
-    """
-    query2_job = client.query(query2)
-    print('Successfully added ticker names')
+def financials_load():
+    '''
+    Load Stock Data to combined data 
+    Combined with twitter data
+    '''
+    #Get Project ID
+    openfile = open(key)
+    jsondata = json.load(openfile)
+    openfile.close()
+    project_id = jsondata['project_id']
+    finance_table_id = project_id + ".yfinance_data.stock_info"
+    twitter_table_id = project_id + ".twitter_data.stock_aggregated"
+    load_table_id = project_id + ".combined_data.stock_info"
     
+    #Connect To Bigquery
+    credentials_path = key
+    os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = credentials_path
+    client = bigquery.Client()
+
+    #Joining finance table and twitter scores table per day
+    query = f"""
+        INSERT INTO `{load_table_id}`
+        SELECT 
+            A.Date,
+            A.Ticker,
+            A.Open,
+            A.High,
+            A.Low,
+            A.Close,
+            A.Adj_Close,
+            A.Volume,
+            A.MA_5days,
+            A.Signal,
+            B.WeightedCompoundScore
+        FROM
+            `{finance_table_id}` as A
+    
+        JOIN `{twitter_table_id}` as B ON A.Ticker = B.Ticker AND A.Date = B.Date
+    """
+    query_job = client.query(query)
+    # query_job = client.query(query, job_config=bigquery.QueryJobConfig(write_disposition="WRITE_TRUNCATE"))
+    print('Successfully loaded combined table')
+
 default_args = {
      'owner': 'airflow',
      'depends_on_past': False,
@@ -160,4 +189,10 @@ with DAG(
         python_callable=financials_transform
     )
 
-financialsExtract >> financialsStage >> financialsTransform
+    financialsLoad = PythonOperator(
+        task_id='financials_load',
+        provide_context=True,
+        python_callable=financials_load
+    )
+
+financialsExtract >> financialsStage >> financialsTransform >> financialsLoad
