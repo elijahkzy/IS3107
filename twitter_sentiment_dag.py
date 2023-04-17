@@ -24,8 +24,8 @@ nltk.download('vader_lexicon')
 nltk.download('stopwords')
 
 # Change to your key
-key = '/mnt/c/Users/darkk/OneDrive/NUS/Y3S2/IS3107/proj/test-proj-378801-e260b3ef768e.json'
-# key = '/mnt/c/Users/Estella Lee Jie Yi/OneDrive - National University of Singapore/Desktop/NUS/Y3S2/IS3107/project/key.json'
+# key = '/mnt/c/Users/hsinz/Desktop/nus/Y3S2/IS3107/Proj/privateKey.json'
+key = '/mnt/c/Users/hsinz/Desktop/nus/Y3S2/IS3107/Proj/sharedkey.json'
 
 def get_twitter_data(ti):
     # pull data from staging area of twitter table in bigquery
@@ -65,6 +65,17 @@ def clean_tweet(tweet):
         filtered_words = [word for word in words if word not in stop_words]
         return ' '.join(filtered_words)
 
+def splitScore(df):
+    df['Negative'] = df['Score'].apply(lambda x: x.get('neg'))
+    df['Neutral'] = df['Score'].apply(lambda x: x.get('neu'))
+    df['Positive'] = df['Score'].apply(lambda x: x.get('pos'))
+    df['Compound'] = df['Score'].apply(lambda x: x.get('compound'))
+    return df
+
+def weighted_avg(df):
+    weights = df['Likecount'] + 1
+    return (df['Compound'] * weights).sum() / weights.sum()
+
 def clean_twitter_data(ti):
     # cleans the data, removing hashtags, stop words etc.
 
@@ -72,7 +83,7 @@ def clean_twitter_data(ti):
     json_str = ''.join(twitter_data_str)
     df = pd.read_json(json_str, encoding='utf-8', orient = 'records')
 
-    df['texts_cleaned'] = df['texts'].apply(lambda x: clean_tweet(x))
+    df['Texts_cleaned'] = df['Texts'].apply(lambda x: clean_tweet(x))
     twitter_data_cleaned = df.to_json(orient = 'records')
     ti.xcom_push(key = 'twitter_data_cleaned', value = twitter_data_cleaned)
     print('Sucessfully cleaned data')
@@ -83,12 +94,20 @@ def process_twitter_data(ti):
     twitter_data_str = ti.xcom_pull(key='twitter_data_cleaned')
     json_str = ''.join(twitter_data_str)
     df = pd.read_json(json_str, encoding='utf-8', orient = 'records')
-
+    
     sia = SentimentIntensityAnalyzer()
-    df['score'] = df['texts_cleaned'].apply(lambda x: sia.polarity_scores(x))
+    df['Score'] = df['Texts_cleaned'].apply(lambda x: sia.polarity_scores(x))
+    df = splitScore(df)
+    df['Date'] = df['Datetime'].apply(lambda x: x.date())
+    df.to_json(orient='records')
+
+    aggregated_data = df.groupby(['Ticker_Name', 'Ticker', 'Date'], as_index = False).apply(weighted_avg)
+    aggregated_data.rename(columns = {None: 'WeightedCompoundScore'}, inplace = True)
 
     twitter_data_processed = df.to_json(orient = 'records')
+    aggregated_data_processed = aggregated_data.to_json(orient = 'records')
     ti.xcom_push(key = 'twitter_data_processed', value = twitter_data_processed)
+    ti.xcom_push(key = 'aggregated_data_processed', value = aggregated_data_processed)
 
     print('Successfully processed data')
 
@@ -98,6 +117,10 @@ def tweetdata_upload(ti):
     twitter_data_processed = ti.xcom_pull(key='twitter_data_processed')
     json_str = ''.join(twitter_data_processed)
     df = pd.read_json(json_str, encoding='utf-8', orient = 'records')
+
+    aggregated_data_processed = ti.xcom_pull(key = 'aggregated_data_processed')
+    json_str_agg = ''.join(aggregated_data_processed)
+    df_aggregated = pd.read_json(json_str_agg, encoding='utf-8', orient = 'records')
 
     openfile=open(key)
     jsondata=json.load(openfile)
@@ -114,10 +137,15 @@ def tweetdata_upload(ti):
         encoding='UTF-8',
         write_disposition=bigquery.WriteDisposition.WRITE_TRUNCATE
     )
+
     job = client.load_table_from_dataframe(df, staging_table_id, job_config=job_config)
+    aggregated_table_id = project_id + '.twitter_data.stock_aggregated'
+    job = client.load_table_from_dataframe(df_aggregated, aggregated_table_id, job_config=job_config)
+
     job.result()
 
     print(f'Pushed data into big query table {staging_table_id}')
+    print(f'Pushed aggregated data into big query table {aggregated_table_id}')
 
 default_args = {
      'owner': 'airflow',
