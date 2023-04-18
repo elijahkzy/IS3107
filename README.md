@@ -2,7 +2,8 @@
 <br />
 
 ## Objective
-The stock market is a complex and ever-changing environment, influenced by many factors ranging from global economic events to opinions of people on social media, which makes it challenging to predict stock prices. Our project aims to build a data pipeline to extract financial data and perform sentiment analysis on popular social media platforms like Twitter to aid in predicting future stock prices and make more informed decisions on selling and buying stocks.
+The stock market is a complex and ever-changing environment, influenced by many factors ranging from global economic events to opinions of people on social media, which makes it challenging to predict stock prices. Traditionally, investors have relied on technical analysis to make investment decisions, but these methods have their limitations and may not provide accurate predictions. Aside from industry trends, economic information and news regarding the company, there are other external factors that can affect changes in a stock’s price. Nowadays, social media have become a prevalent part of our lives and it is clear that people’s opinions and emotions expressed online can have a significant impact on market movements. The short squeeze on GameStop’s GME stock in 2021 is a good example. It was initially triggered by the r/WallStreetBets subreddit, where traders shared their bullish opinions and encouraged others to join in. Our project aims to build a data pipeline to extract financial data and perform sentiment analysis on popular social media platforms like Twitter to aid in predicting future stock prices and make more informed decisions on selling and buying stocks.
+
 
 ## Tools & Technologies
 - Cloud - [Google Cloud Platform](https://cloud.google.com/free/?utm_source=google&utm_medium=cpc&utm_campaign=japac-SG-all-en-dr-BKWS-all-pkws-trial-EXA-dr-1605216&utm_content=text-ad-none-none-DEV_c-CRE_649077641201-ADGP_Hybrid%20%7C%20BKWS%20-%20EXA%20%7C%20Txt%20~%20GCP_General_gcp_main-KWID_43700075274235034-aud-970366092687%3Akwd-42926176582&userloc_9062542-network_g&utm_term=KW_cloud%20platform%20google&gclid=CjwKCAjw__ihBhADEiwAXEazJjiZ_yJ9aCxMALA9XniM1WcMpsVMAZ_ugUE9ozmS6xx3Ccs662clTxoCZd8QAvD_BwE&gclsrc=aw.ds)
@@ -15,7 +16,7 @@ The stock market is a complex and ever-changing environment, influenced by many 
 - Twitter for sentiment analysis data
 
 ## Data Pipeline Architecture
-<img src="/images/data pipeline architecture.jpg" width="1013" height="500">
+<img src="/images/data pipeline architecture.jpg" width="900" height="441">
 
 ## Data Warehouse Architecture
 
