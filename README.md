@@ -6,8 +6,8 @@ The stock market is a complex and ever-changing environment, influenced by many 
 
 ## Tools & Technologies
 - Cloud - [Google Cloud Platform](https://cloud.google.com/free/?utm_source=google&utm_medium=cpc&utm_campaign=japac-SG-all-en-dr-BKWS-all-pkws-trial-EXA-dr-1605216&utm_content=text-ad-none-none-DEV_c-CRE_649077641201-ADGP_Hybrid%20%7C%20BKWS%20-%20EXA%20%7C%20Txt%20~%20GCP_General_gcp_main-KWID_43700075274235034-aud-970366092687%3Akwd-42926176582&userloc_9062542-network_g&utm_term=KW_cloud%20platform%20google&gclid=CjwKCAjw__ihBhADEiwAXEazJjiZ_yJ9aCxMALA9XniM1WcMpsVMAZ_ugUE9ozmS6xx3Ccs662clTxoCZd8QAvD_BwE&gclsrc=aw.ds)
-- Storage - [BigQuery](https://cloud.google.com/bigquery)
-- Management of workflow - [Apache Airflow](https://airflow.apache.org/)
+- Data Storage - [BigQuery](https://cloud.google.com/bigquery)
+- Workflow Management - [Apache Airflow](https://airflow.apache.org/)
 - Language - [Python](https://www.python.org/)
 
 ## Data
