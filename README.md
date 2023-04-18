@@ -11,7 +11,7 @@ The stock market is a complex and ever-changing environment, influenced by many 
 - Language - [Python](https://www.python.org/)
 
 ## Data
-- YFinance for finanacial data
+- Yfinance for financial data
 - Twitter for sentiment analysis data
 
 ## Data Pipeline Architecture
