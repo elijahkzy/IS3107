@@ -15,7 +15,7 @@ The stock market is a complex and ever-changing environment, influenced by many 
 - Twitter for sentiment analysis data
 
 ## Data Pipeline Architecture
-
+![what](/images/data pipeline architecture.jpg "is this")
 
 ## Data Warehouse Architecture
 
