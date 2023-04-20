@@ -67,7 +67,9 @@ def tweetdata_extract(ti):
 
     # Format the datetime object to a string
     formatted_utc_today = utc_today.strftime('%Y-%m-%dT%H:%M:%SZ')
-    print(formatted_utc_today)
+    currentDate = formatted_utc_today[:10]
+    currentTime = utc_now.strftime("%H:%M:%S")
+    print(f'Retrieving tweets for date: {currentDate} as of time: {currentTime}')
 
     for ticker in tickers:
         print(ticker[1])
@@ -94,13 +96,14 @@ def tweetdata_extract(ti):
             created_dates.append('')
             author_id.append('')
             tickerCode.append(ticker[0])
-            likeCount.append('')
+            likeCount.append(0)
 
     df = pd.DataFrame({'Ticker_Name': tickerName,
                        'Ticker': tickerCode,
                         'Texts':texts, 
                         'Likecount': likeCount,
                         'Datetime': created_dates})
+    df = df.dropna(axis = 1)
     twitter_data = df.to_json(orient='records')
     ti.xcom_push(key='twitter_data', value=twitter_data)
 
@@ -126,6 +129,7 @@ def tweetdata_upload(ti):
         encoding='UTF-8',
         write_disposition=bigquery.WriteDisposition.WRITE_APPEND
     )
+    
     job = client.load_table_from_dataframe(df, staging_table_id, job_config=job_config)
     job.result()
     print(f'Appended {len(df)} rows of date')
