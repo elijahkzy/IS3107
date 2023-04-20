@@ -9,8 +9,6 @@ import json
 from airflow.operators.python import PythonOperator
 from airflow.operators.trigger_dagrun import TriggerDagRunOperator
 import os
-import csv
-import logging
 
 from airflow import DAG
 
@@ -19,7 +17,7 @@ key = '/mnt/c/AA NUS/Y3S2/IS3107/Project Testing/key.json'
 
 def financials_extract(ti):
     '''
-    Extract stock information in STI Components for past five days
+    Extract stock information in STI Components for past 3 months
     Gets the stock data using Yahoo Finance API in Pandas Dataframe and push as JSON
 
     Input: None
@@ -31,22 +29,22 @@ def financials_extract(ti):
     df = pd.DataFrame()
 
     for ticker in tickers:
-        prices = yf.download(ticker, period = '5d').iloc[: , :6].dropna(axis=0, how='any')
+        prices = yf.download(ticker, period = "5d").iloc[: , :6].dropna(axis=0, how='any')
         prices = prices.loc[~prices.index.duplicated(keep='last')]
         prices = prices.reset_index()
-
+        print(prices)
         prices.insert(loc = 1, column = 'Ticker', value = ticker)
         prices = prices.rename({'Adj Close': 'Adj_Close'}, axis=1)
         df = pd.concat([df, prices],ignore_index = True)
         i += 1
 
-    print(df)
+    # print(df)
     stock_info_daily = df.to_json(orient='records')
     ti.xcom_push(key='stock_info_daily', value=stock_info_daily)
 
 def financials_stage(ti):
     '''
-    Push the raw stockdata into google bigquery dataset yfinance_data_raw
+    Push the raw stockdata into google bigquery dataset yfinance_data
     '''
     stock_info_daily = ti.xcom_pull(key='stock_info_daily', task_ids=['financials_extract'])[0]
     df = pd.DataFrame(eval(stock_info_daily))
@@ -62,13 +60,11 @@ def financials_stage(ti):
     client = bigquery.Client()
     
     project_id = jsondata['project_id']
-    # staging_table_id = project_id + ".yfinance_data_raw.stock_info"
-    # job = client.load_table_from_dataframe(df, staging_table_id)
-    # job.result()
-    staging_table_id = "yfinance_data_raw.stock_info"
+    staging_table_id = "yfinance_data.stock_raw"
     pandas_gbq.to_gbq(df, destination_table=staging_table_id, 
                       project_id=project_id,
                       if_exists='append')
+
 
 def financials_transform():
     '''
@@ -80,7 +76,7 @@ def financials_transform():
     jsondata = json.load(openfile)
     openfile.close()
     project_id = jsondata['project_id']
-    staging_table_id = project_id + ".yfinance_data_raw.stock_info"
+    staging_table_id = project_id + ".yfinance_data.stock_raw"
     actual_table_id = project_id + ".yfinance_data.stock_info"
     
     #Connect To Bigquery
@@ -112,8 +108,7 @@ def financials_transform():
 
 def financials_load():
     '''
-    Load Stock Data to combined data 
-    Combined with twitter data
+    Load Stock Data to combined_data together with twitter data
     '''
     #Get Project ID
     openfile = open(key)
@@ -166,9 +161,9 @@ with DAG(
     'stocks_info_dag',
     default_args=default_args,
     description='Collect Stock Info For Analysis',
+    start_date=datetime(2023, 4, 20), 
+    schedule_interval='@daily',
     catchup=False, 
-    start_date=datetime(2020, 12, 23), 
-    schedule_interval=timedelta(days=1)
 ) as dag:
     
     financialsExtract = PythonOperator(
