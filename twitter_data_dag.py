@@ -191,7 +191,7 @@ def clean_twitter_data(ti):
     json_str = ''.join(twitter_data_str)
     df = pd.read_json(json_str, encoding='utf-8', orient = 'records')
 
-    df['Texts_cleaned'] = df['Texts'].apply(lambda x: clean_tweet(x))
+    df['Texts_Cleaned'] = df['Texts'].apply(lambda x: clean_tweet(x))
     twitter_data_cleaned = df.to_json(orient = 'records')
     ti.xcom_push(key = 'twitter_data_cleaned', value = twitter_data_cleaned)
     print('Sucessfully cleaned data')
@@ -204,7 +204,7 @@ def process_twitter_data(ti):
     df = pd.read_json(json_str, encoding='utf-8', orient = 'records')
     
     sia = SentimentIntensityAnalyzer()
-    df['Score'] = df['Texts_cleaned'].apply(lambda x: sia.polarity_scores(x))
+    df['Score'] = df['Texts_Cleaned'].apply(lambda x: sia.polarity_scores(x))
     df = splitScore(df)
     df['Date'] = df['Datetime'].apply(lambda x: x.date())
     df.to_json(orient='records')
