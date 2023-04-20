@@ -101,7 +101,7 @@ def tweetdata_extract(ti):
     df = pd.DataFrame({'Ticker_Name': tickerName,
                        'Ticker': tickerCode,
                         'Texts':texts, 
-                        'Likecount': likeCount,
+                        'Like_Count': likeCount,
                         'Datetime': created_dates})
     df = df.dropna(axis = 1)
     twitter_data = df.to_json(orient='records')
@@ -180,7 +180,7 @@ def splitScore(df):
     return df
 
 def weighted_avg(df):
-    weights = df['Likecount'] + 1
+    weights = df['Like_Count'] + 1
     return (df['Compound'] * weights).sum() / weights.sum()
 
 def clean_twitter_data(ti):
@@ -210,7 +210,7 @@ def process_twitter_data(ti):
     df.to_json(orient='records')
 
     aggregated_data = df.groupby(['Ticker_Name', 'Ticker', 'Date'], as_index = False).apply(weighted_avg)
-    aggregated_data.rename(columns = {None: 'WeightedCompoundScore'}, inplace = True)
+    aggregated_data.rename(columns = {None: 'Weighted_Compound_Score'}, inplace = True)
 
     twitter_data_processed = df.to_json(orient = 'records')
     aggregated_data_processed = aggregated_data.to_json(orient = 'records')
