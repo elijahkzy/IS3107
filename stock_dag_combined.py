@@ -157,8 +157,7 @@ def financials_transform():
 
 def financials_load():
     '''
-    Load Stock Data to combined data 
-    Combined with twitter data
+    Load Stock Data to combined_data together with twitter data
     '''
     #Get Project ID
     openfile = open(key)
@@ -233,8 +232,8 @@ with DAG(
     default_args=default_args,
     description='Collect Stock Info For Analysis',
     catchup=False, 
-    start_date=datetime(2020, 12, 23), 
-    schedule_interval=timedelta(days=1)
+    start_date=datetime(2023, 4, 20), 
+    schedule_interval='@daily'
 ) as dag:
     
     financialsExtract = PythonOperator(
