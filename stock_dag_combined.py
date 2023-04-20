@@ -231,7 +231,7 @@ with DAG(
     description='Collect Stock Info For Analysis',
     catchup=False, 
     start_date=datetime(2023, 4, 20), 
-    schedule_interval='@daily'
+    schedule_interval=timedelta(days=1)
 ) as dag:
     
     financialsExtract = PythonOperator(
