@@ -17,6 +17,7 @@ from airflow import DAG
 
 # Change to your key
 key = '/mnt/c/Users/darkk/OneDrive/NUS/Y3S2/IS3107/proj/key.json'
+
 # local postgres db credentials 
 username = "postgres"
 password = "postgres"
@@ -72,10 +73,7 @@ def financials_stage(ti):
     client = bigquery.Client()
     
     project_id = jsondata['project_id']
-    # staging_table_id = project_id + ".yfinance_data_raw.stock_info"
-    # job = client.load_table_from_dataframe(df, staging_table_id)
-    # job.result()
-    staging_table_id = "yfinance_data.staging_stock_info"
+    staging_table_id = "yfinance_data.stock_raw"
     pandas_gbq.to_gbq(df, destination_table=staging_table_id, 
                       project_id=project_id,
                       if_exists='append')
@@ -92,7 +90,7 @@ def financials_transform():
     jsondata = json.load(openfile)
     openfile.close()
     project_id = jsondata['project_id']
-    staging_table_id = project_id + ".yfinance_data.staging_stock_info"
+    staging_table_id = project_id + ".yfinance_data.stock_raw"
     actual_table_id = project_id + ".yfinance_data.stock_info"
     
     #Connect To Bigquery
