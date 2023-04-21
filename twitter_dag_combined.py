@@ -332,7 +332,7 @@ default_args = {
     }
 
 with DAG(
-    'zw_dag',
+    'twitter_data_dag',
     default_args=default_args,
     description='Collect Twitter Info For Analysis',
     catchup=False, 
