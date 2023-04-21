@@ -30,6 +30,15 @@ engine = create_engine(f"postgresql://{username}:{password}@{host}:{port}/{datab
 # Change to your key
 # key = '/mnt/c/Users/hsinz/Desktop/nus/Y3S2/IS3107/Proj/privateKey.json'
 key = '/mnt/c/Users/darkk/OneDrive/NUS/Y3S2/IS3107/proj/is3107-test.json'
+
+def mapper(key):
+    if key == 'grab':
+        return '#grab'
+    elif key =='dbs':
+        return 'dbs bank'
+    else:
+        return key
+    
 def tweetdata_extract(ti):
     #scrape 1 day of tweets up to 100 tweets based on tickers
     tickers=[
@@ -83,7 +92,7 @@ def tweetdata_extract(ti):
 
     for ticker in tickers:
         print(ticker[1])
-        keyword = ticker[1] if ticker[1] != 'grab' else '#grab'
+        keyword = mapper(ticker[1])
 
         tweets = client.search_recent_tweets(query= keyword, max_results=100,
             start_time = formatted_utc_today,
@@ -94,7 +103,7 @@ def tweetdata_extract(ti):
         try:
             for tweet in tweets['data']:
                 if tweet['lang'] == 'en':
-                    tickerName.append(keyword if keyword != '#grab' else 'grab')
+                    tickerName.append(ticker[1])
                     texts.append(tweet['text'])
                     created_dates.append(tweet['created_at'])
                     author_id.append(tweet['author_id'])
@@ -145,26 +154,6 @@ def tweetdata_upload(ti):
     job.result()
     print(f'Appended {len(df)} rows of date')
 
-def get_staging_data(ti):
-    # pull data from staging area of twitter table in bigquery
-
-    credentials_path = key
-    os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = credentials_path
-    client = bigquery.Client()
-
-    openfile = open(key)
-    jsondata = json.load(openfile)
-
-    project_id = jsondata['project_id']
-    staging_table_id = project_id + ".twitter_data.stock_info"
-
-    table = client.get_table(staging_table_id)
-    df = client.list_rows(table).to_dataframe()
-    twitter_staging_data = df.to_json(orient='records')
-
-    print(f'Successfully loaded twitterdata with {len(df)} rows')
-    ti.xcom_push(key = 'twitter_staging_data', value = twitter_staging_data)
-
 def clean_tweet(tweet):
         # method for cleaning tweets used in clean_twitter_data dag
 
@@ -191,21 +180,65 @@ def splitScore(df):
     return df
 
 def weighted_avg(df):
-    weights = df['Likecount'] + 1
+    weights = df['Like_Count'] + 1
     return (df['Compound'] * weights).sum() / weights.sum()
 
 def clean_twitter_data(ti):
     # cleans the data, removing hashtags, stop words etc.
 
-    # twitter_data_str = ti.xcom_pull(key='twitter_data', task_ids=['get_twitter_data'])
-    twitter_data_str = ti.xcom_pull(key='twitter_staging_data')
+    twitter_data_str = ti.xcom_pull(key='twitter_data')
     json_str = ''.join(twitter_data_str)
     df = pd.read_json(json_str, encoding='utf-8', orient = 'records')
 
-    df['Texts_cleaned'] = df['Texts'].apply(lambda x: clean_tweet(x))
+    df['Texts_Cleaned'] = df['Texts'].apply(lambda x: clean_tweet(x))
     twitter_data_cleaned = df.to_json(orient = 'records')
     ti.xcom_push(key = 'twitter_data_cleaned', value = twitter_data_cleaned)
     print('Sucessfully cleaned data')
+    
+def fillMissing(aggregated_df):
+    #input any missing data for the day with a Weighted_Compound_Score of 0
+    dictMapper = dict([('dbs', 'd05.SI'),
+     ('garena', 'SE'),     
+     ('shopee', 'SE'),     
+     ('ocbc', '039.SI'),     
+     ('uob', 'U11.SI'),     
+     ('singtel', 'Z74.SI'),     
+     ('wilmar', 'F34.SI'),     
+     ('singapore airlines', 'C6L.SI'),     
+     ('grab', 'GRAB'),     
+     ('genting', 'G13.SI'),     
+     ('capitaland', 'C38U.SI'),     
+     ('great eastern', 'G07.SI'),     
+     ('jardine', 'C07.SI'),     
+     ('ascendas', 'A17U.SI'),     
+     ('st engineering', 'S63.SI'),     
+     ('keppel', 'BN4.SI')])
+
+    expected_tickers = {'dbs',
+                 'garena',
+                 'shopee',
+                 'ocbc',
+                 'uob',
+                 'singtel',
+                 'wilmar',
+                 'singapore airlines',
+                 'grab',
+                 'genting',
+                 'capitaland',
+                 'great eastern',
+                 'jardine',
+                 'ascendas',
+                 'st engineering',
+                 'keppel'}
+
+    present_tickers = set(aggregated_df['Ticker_Name'].values)
+    missing_tickers = expected_tickers - present_tickers
+    for ticker in missing_tickers:
+        date = aggregated_df.iloc[0]['Date']
+        aggregated_df = aggregated_df.append({'Ticker_Name': ticker, 'Ticker': dictMapper[ticker], 'Date': date, 'Weighted_Compound_Score': 0}, ignore_index = True)
+
+    aggregated_df.reset_index(drop = True)
+    return aggregated_df
 
 def process_twitter_data(ti):
     # NLP on the cleaned data using sentiment analysis 
@@ -215,13 +248,15 @@ def process_twitter_data(ti):
     df = pd.read_json(json_str, encoding='utf-8', orient = 'records')
     
     sia = SentimentIntensityAnalyzer()
-    df['Score'] = df['Texts_cleaned'].apply(lambda x: sia.polarity_scores(x))
+    df['Score'] = df['Texts_Cleaned'].apply(lambda x: sia.polarity_scores(x))
     df = splitScore(df)
+    df.drop(columns = {'Score'}, inplace = True)
     df['Date'] = df['Datetime'].apply(lambda x: x.date())
     df.to_json(orient='records')
 
     aggregated_data = df.groupby(['Ticker_Name', 'Ticker', 'Date'], as_index = False).apply(weighted_avg)
-    aggregated_data.rename(columns = {None: 'WeightedCompoundScore'}, inplace = True)
+    aggregated_data.rename(columns = {None: 'Weighted_Compound_Score'}, inplace = True)
+    aggregated_data = fillMissing(aggregated_data)
 
     twitter_data_processed = df.to_json(orient = 'records')
     aggregated_data_processed = aggregated_data.to_json(orient = 'records')
@@ -245,7 +280,6 @@ def tweet_processed_data_upload(ti):
     df_aggregated['WeightedCompoundScore'] = df_aggregated['WeightedCompoundScore'].apply(json.dumps)
     print(df_aggregated.head(5))
 
-
     openfile=open(key)
     jsondata=json.load(openfile)
     openfile.close()
@@ -259,7 +293,7 @@ def tweet_processed_data_upload(ti):
     staging_table_id = project_id + ".twitter_data.stock_processed"
     job_config = bigquery.LoadJobConfig(
         encoding='UTF-8',
-        write_disposition=bigquery.WriteDisposition.WRITE_TRUNCATE
+        write_disposition=bigquery.WriteDisposition.WRITE_APPEND
     )
 
     df.to_sql("twitter_processed_data", con=engine, if_exists="append", index=False)
@@ -318,12 +352,6 @@ with DAG(
         python_callable=tweetdata_upload
     )
 
-    get_staging_data = PythonOperator(
-        task_id='get_staging_data',
-        provide_context=True,
-        python_callable=get_staging_data
-    )
-
     clean_twitter_data = PythonOperator(
         task_id='clean_twitter_data',
         provide_context=True,
@@ -348,4 +376,4 @@ with DAG(
         dag=dag,  
     )
 
-get_twitter_data >> push_twitter_data >> get_staging_data >> clean_twitter_data >> process_twitter_data >> push_processed_twitter_data
+get_twitter_data >> push_twitter_data  >> clean_twitter_data >> process_twitter_data >> push_processed_twitter_data
