@@ -376,4 +376,4 @@ with DAG(
         dag=dag,  
     )
 
-get_twitter_data >> push_twitter_data  >> clean_twitter_data >> process_twitter_data >> push_processed_twitter_data
+get_twitter_data >> push_twitter_data  >> clean_twitter_data >> process_twitter_data >> push_processed_twitter_data >> sendEmail
