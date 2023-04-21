@@ -120,7 +120,7 @@ def tweetdata_extract(ti):
     df = pd.DataFrame({'Ticker_Name': tickerName,
                        'Ticker': tickerCode,
                         'Texts':texts, 
-                        'Likecount': likeCount,
+                        'Like_Count': likeCount,
                         'Datetime': created_dates})
     df = df.dropna(axis = 1)
     twitter_data = df.to_json(orient='records')
