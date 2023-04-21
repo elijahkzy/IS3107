@@ -23,7 +23,7 @@ def setupDataset():
     '''
     Sets up the dataset
     '''
-    dataset = ["yfinance_data_raw", "yfinance_data", "stock_info", "twitter_data_raw", "twitter_data", "combined_data"] #list of datasets to make 
+    dataset = ["yfinance_data", "twitter_data", "combined_data"] #list of datasets to make 
 
     for d in dataset:
         # Construct a full Dataset object to send to the API.
@@ -76,32 +76,6 @@ def setupTable():
         bigquery.SchemaField("Weighted_Compound_Score", "FLOAT"),
     ]
     table = bigquery.Table(project_id + "." + "combined_data.stock_info", schema=schema)
-    table = client.create_table(table)  # Make an API request.
-    print(
-        "Created table {}.{}.{}".format(table.project, table.dataset_id, table.table_id)
-    )
-    
-    #Setup Dividend Table
-    schema = [
-        bigquery.SchemaField("Stock", "STRING"),
-        bigquery.SchemaField("Ticker", "STRING"),
-        bigquery.SchemaField("Dividends_Per_Share", "FLOAT"),	
-        bigquery.SchemaField("EBITDA", "FLOAT"),
-        bigquery.SchemaField("Revenue", "FLOAT"),
-        bigquery.SchemaField("Forward_PE", "FLOAT"),
-        bigquery.SchemaField("Market_Cap", "FLOAT"),
-        bigquery.SchemaField("PEG_Ratio", "FLOAT"),
-        bigquery.SchemaField("Earnings_Per_Share", "FLOAT"),
-        bigquery.SchemaField("Price_Book", "FLOAT"),
-        bigquery.SchemaField("Price_Sales", "FLOAT"),
-        bigquery.SchemaField("Trailing_PE", "FLOAT"),
-        bigquery.SchemaField("Open", "FLOAT"),
-        bigquery.SchemaField("High", "FLOAT"),
-        bigquery.SchemaField("Low", "FLOAT"),
-        bigquery.SchemaField("Close", "FLOAT"),
-        bigquery.SchemaField("Volume", "FLOAT"),
-    ]
-    table = bigquery.Table(project_id + "." + "stock_info.staging", schema=schema)
     table = client.create_table(table)  # Make an API request.
     print(
         "Created table {}.{}.{}".format(table.project, table.dataset_id, table.table_id)
