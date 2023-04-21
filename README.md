@@ -14,6 +14,7 @@ The stock market is a complex and ever-changing environment, influenced by many 
 ## Data
 - Yfinance for financial data
 - Twitter for sentiment analysis data
+<img src="/images/data preprocessing.jpg" width="900" height="330">
 
 ## Data Pipeline Architecture
 <img src="/images/data pipeline architecture.jpg" width="900" height="441">
