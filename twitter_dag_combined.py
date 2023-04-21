@@ -28,8 +28,8 @@ database = "is3107"
 engine = create_engine(f"postgresql://{username}:{password}@{host}:{port}/{database}")
 
 # Change to your key
-# key = '/mnt/c/Users/hsinz/Desktop/nus/Y3S2/IS3107/Proj/privateKey.json'
-key = '/mnt/c/Users/darkk/OneDrive/NUS/Y3S2/IS3107/proj/is3107-test.json'
+key = '/mnt/c/Users/hsinz/Desktop/nus/Y3S2/IS3107/Proj/privateKey.json'
+# key = '/mnt/c/Users/darkk/OneDrive/NUS/Y3S2/IS3107/proj/is3107-test.json'
 
 def mapper(key):
     if key == 'grab':
@@ -277,7 +277,7 @@ def tweet_processed_data_upload(ti):
     aggregated_data_processed = ti.xcom_pull(key = 'aggregated_data_processed')
     json_str_agg = ''.join(aggregated_data_processed)
     df_aggregated = pd.read_json(json_str_agg, encoding='utf-8', orient = 'records')
-    df_aggregated['WeightedCompoundScore'] = df_aggregated['WeightedCompoundScore'].apply(json.dumps)
+    df_aggregated['Weighted_Compound_Score'] = df_aggregated['Weighted_Compound_Score'].apply(json.dumps)
     print(df_aggregated.head(5))
 
     openfile=open(key)
@@ -332,7 +332,7 @@ default_args = {
     }
 
 with DAG(
-    'twitter_data_dag',
+    'zw_dag',
     default_args=default_args,
     description='Collect Twitter Info For Analysis',
     catchup=False, 
