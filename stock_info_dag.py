@@ -138,11 +138,11 @@ def financials_load():
             A.Volume,
             A.MA_5days,
             A.Signal,
-            B.WeightedCompoundScore
+            B.Weighted_Compound_Score
         FROM
             `{finance_table_id}` as A
     
-        JOIN `{twitter_table_id}` as B ON A.Ticker = B.Ticker AND A.Date = B.Date
+        JOIN `{twitter_table_id}` as B ON A.Ticker = B.Ticker AND CAST(A.Date AS Date) = CURRENT_DATE() AND CAST(B.Date AS date) = CURRENT_DATE()
     """
     query_job = client.query(query)
     # query_job = client.query(query, job_config=bigquery.QueryJobConfig(write_disposition="WRITE_TRUNCATE"))
@@ -162,7 +162,7 @@ with DAG(
     default_args=default_args,
     description='Collect Stock Info For Analysis',
     start_date=datetime(2023, 4, 20), 
-    schedule_interval='@daily',
+    schedule_interval=timedelta(days=1),
     catchup=False, 
 ) as dag:
     
