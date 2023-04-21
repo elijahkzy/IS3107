@@ -104,7 +104,7 @@ def financials_transform():
         SELECT *
         FROM (SELECT *, AVG(CAST(Close AS float64)) OVER (PARTITION BY p.Ticker ORDER BY Date ROWS BETWEEN 4 PRECEDING AND CURRENT ROW) AS MA_5day,
         CASE
-        WHEN ((Close - AVG(CAST(Close AS float64)) OVER (PARTITION BY p.Ticker ORDER BY Date ROWS BETWEEN 4 PRECEDING AND CURRENT ROW)) > 0.1) or (AVG(CAST(Close AS float64)) OVER (PARTITION BY p.Ticker ORDER BY Date ROWS BETWEEN 4 PRECEDING AND CURRENT ROW) - Close) > 0.1 THEN 'Neutral'
+        WHEN ((Close - AVG(CAST(Close AS float64)) OVER (PARTITION BY p.Ticker ORDER BY Date ROWS BETWEEN 4 PRECEDING AND CURRENT ROW)) < 0.1) or (AVG(CAST(Close AS float64)) OVER (PARTITION BY p.Ticker ORDER BY Date ROWS BETWEEN 4 PRECEDING AND CURRENT ROW) - Close) < 0.1 THEN 'Neutral'
         WHEN Close > AVG(CAST(Close AS float64)) OVER (PARTITION BY p.Ticker ORDER BY Date ROWS BETWEEN 4 PRECEDING AND CURRENT ROW) THEN 'Buy'
         WHEN Close < AVG(CAST(Close AS float64)) OVER (PARTITION BY p.Ticker ORDER BY Date ROWS BETWEEN 4 PRECEDING AND CURRENT ROW) THEN 'Sell'
         else 'Neutral'
@@ -138,7 +138,7 @@ def financials_transform():
         SELECT *,
         AVG(p."Close") OVER (PARTITION BY p."Ticker" ORDER BY p."Date"  ROWS BETWEEN 4 PRECEDING AND CURRENT ROW) AS MA_5day,
         CASE
-        WHEN ((p."Close" - AVG(p."Close") OVER (PARTITION BY p."Ticker" ORDER BY p."Date" ROWS BETWEEN 4 PRECEDING AND CURRENT ROW)) > 0.1) or (AVG(p."Close") OVER (PARTITION BY p."Ticker" ORDER BY p."Date" ROWS BETWEEN 4 PRECEDING AND CURRENT ROW) - p."Close") > 0.1 THEN 'Neutral'
+        WHEN ((p."Close" - AVG(p."Close") OVER (PARTITION BY p."Ticker" ORDER BY p."Date" ROWS BETWEEN 4 PRECEDING AND CURRENT ROW)) < 0.1) or (AVG(p."Close") OVER (PARTITION BY p."Ticker" ORDER BY p."Date" ROWS BETWEEN 4 PRECEDING AND CURRENT ROW) - p."Close") < 0.1 THEN 'Neutral'
         WHEN p."Close" > AVG(p."Close") OVER (PARTITION BY p."Ticker" ORDER BY p."Date" ROWS BETWEEN 4 PRECEDING AND CURRENT ROW) THEN 'Buy'
         WHEN p."Close" < AVG(p."Close") OVER (PARTITION BY p."Ticker" ORDER BY p."Date" ROWS BETWEEN 4 PRECEDING AND CURRENT ROW) THEN 'Sell'
         else 'Neutral'
