@@ -310,7 +310,7 @@ def tweet_processed_data_upload(ti):
 
 def send_email():
     EMAIL = 'is3107group9@gmail.com'
-    PASSWORD = 'is3107group9!!'
+    PASSWORD = 'tovhmnqdumfdzvyd'
     '''
     Sends an email to the recipient if the daily pipeline has been executed successfully. 
 
