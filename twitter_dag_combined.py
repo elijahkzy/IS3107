@@ -29,7 +29,6 @@ engine = create_engine(f"postgresql://{username}:{password}@{host}:{port}/{datab
 
 # Change to your key
 key = '/mnt/c/Users/hsinz/Desktop/nus/Y3S2/IS3107/Proj/privateKey.json'
-# key = '/mnt/c/Users/darkk/OneDrive/NUS/Y3S2/IS3107/proj/is3107-test.json'
 
 def mapper(key):
     if key == 'grab':
@@ -335,7 +334,7 @@ with DAG(
     default_args=default_args,
     description='Collect Twitter Info For Analysis',
     catchup=False, 
-    start_date= datetime(2020, 12, 23), 
+    start_date= datetime(2023, 4, 20), 
     schedule_interval=timedelta(days=1)
 ) as dag:
     
