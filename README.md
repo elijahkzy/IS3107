@@ -22,6 +22,7 @@ The stock market is a complex and ever-changing environment, influenced by many 
 ## Airflow DAGs
 
 ## Setup Guide
+The setup guide can be found [here] (https://docs.google.com/document/d/14zmkT6gOtd6UsKgw3HpDL7UJ8Ex2qINbNhAmDCfanO0/edit)
 
 ## Authors
 - Elijah Koh Zhi Yong - [elijahkzy](https://github.com/elijahkzy)
