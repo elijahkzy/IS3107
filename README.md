@@ -20,6 +20,11 @@ The stock market is a complex and ever-changing environment, influenced by many 
 <img src="/images/data pipeline architecture.jpg" width="900" height="441">
 
 ## Airflow DAGs
+- Financial data DAG
+<img src="/images/financial dag.png" width="900" height="330">
+
+- Twitter data DAG
+<img src="/images/twitter dag.png" width="900" height="441">
 
 ## Setup Guide
 The setup guide can be found [here](https://docs.google.com/document/d/14zmkT6gOtd6UsKgw3HpDL7UJ8Ex2qINbNhAmDCfanO0/edit)
