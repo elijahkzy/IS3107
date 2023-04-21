@@ -271,7 +271,6 @@ def tweet_processed_data_upload(ti):
     twitter_data_processed = ti.xcom_pull(key='twitter_data_processed')
     json_str = ''.join(twitter_data_processed)
     df = pd.read_json(json_str, encoding='utf-8', orient = 'records')
-    df['Score'] = df['Score'].apply(json.dumps)
     print(df.head(5))
 
     aggregated_data_processed = ti.xcom_pull(key = 'aggregated_data_processed')
@@ -332,7 +331,7 @@ default_args = {
     }
 
 with DAG(
-    'zw_dag',
+    'twitter_data_dag',
     default_args=default_args,
     description='Collect Twitter Info For Analysis',
     catchup=False, 
