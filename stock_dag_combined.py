@@ -16,7 +16,7 @@ import smtplib
 from airflow import DAG
 
 # Change to your key
-key = '/mnt/c/Users/darkk/OneDrive/NUS/Y3S2/IS3107/proj/key.json'
+key = '/mnt/c/AA NUS/Y3S2/IS3107/Project Testing/key.json'
 
 # local postgres db credentials 
 username = "postgres"
@@ -185,11 +185,11 @@ def financials_load():
             A.Volume,
             A.MA_5days,
             A.Signal,
-            B.WeightedCompoundScore
+            B.Weighted_Compound_Score
         FROM
             `{finance_table_id}` as A
     
-        JOIN `{twitter_table_id}` as B ON A.Ticker = B.Ticker AND A.Date = B.Date
+        JOIN `{twitter_table_id}` as B ON A.Ticker = B.Ticker AND CAST(A.Date AS Date) = CURRENT_DATE() AND CAST(B.Date AS date) = CURRENT_DATE()
     """
 
     query_job = client.query(query)
