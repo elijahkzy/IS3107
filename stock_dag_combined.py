@@ -31,10 +31,7 @@ engine = create_engine(f"postgresql://{username}:{password}@{host}:{port}/{datab
 
 def financials_extract(ti):
     '''
-    Extract stock information in STI Components for past five days
-    Gets the stock data using Yahoo Finance API in Pandas Dataframe and push as JSON
-    Input: None
-    Output: None
+    Extract stock information for 15 selected tickers using Yahoo Finance API in Pandas Dataframe and push as JSON
     '''
     #STI Index
     tickers =  ['D05.SI', 'SE', 'O39.SI', 'U11.SI' ,'Z74.SI', 'F34.SI', 'C6L.SI', 'GRAB', 'G13.SI', 'C38U.SI','G07.SI', 'C07.SI', 'A17U.SI', 'S63.SI', 'BN4.SI']
@@ -57,7 +54,7 @@ def financials_extract(ti):
 
 def financials_stage(ti):
     '''
-    Push the raw stockdata into google bigquery dataset yfinance_data_raw
+    Push the raw stockdata into google bigquery table yfinance_data.stock_raw
     '''
     stock_info_daily = ti.xcom_pull(key='stock_info_daily', task_ids=['financials_extract'])[0]
     df = pd.DataFrame(eval(stock_info_daily))
@@ -83,7 +80,7 @@ def financials_stage(ti):
 def financials_transform():
     '''
     Load Stock Data from Staging Table to Main Table
-    Derive Moving-Average(5) and Signal columns using SQL, and pass Close, Moving-Average(5) and Signal to Main Tables
+    Derive Moving-Average(5) and Signal columns using SQL, and pass Close, Moving-Average(5) and Signal to Main table yfinance_data.stock_info
     '''
     #Get Project ID
     openfile = open(key)
@@ -98,7 +95,7 @@ def financials_transform():
     os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = credentials_path
     client = bigquery.Client()
 
-    #Load Data from Staging table to Main table
+    #Load Data from Staging table to Main table & truncate Staging table
     query =  f"""
         INSERT INTO `{actual_table_id}`
         SELECT *
@@ -155,7 +152,7 @@ def financials_transform():
 
 def financials_load():
     '''
-    Load Stock Data to combined_data together with twitter data
+    Load Stock Data to combined_data.stock_info together with twitter data
     '''
     #Get Project ID
     openfile = open(key)
