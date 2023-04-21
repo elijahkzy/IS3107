@@ -19,8 +19,6 @@ The stock market is a complex and ever-changing environment, influenced by many 
 ## Data Pipeline Architecture
 <img src="/images/data pipeline architecture.jpg" width="900" height="441">
 
-## Data Warehouse Architecture
-
 ## Airflow DAGs
 
 ## Setup Guide
